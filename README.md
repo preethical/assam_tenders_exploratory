@@ -6,5 +6,5 @@ This repository stores all information regarding the public contracting informat
 
 * Background  
 * Methodology  
-    *Load, clean and prepare the data  
-    *Exploratory analysis  
+    *Load, clean and prepare the data  - assam_tenders.R  
+    *Exploratory analysis   - assam_proc_explore.rmd
