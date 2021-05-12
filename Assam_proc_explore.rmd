@@ -43,7 +43,7 @@ assam_time<- assam_published %>% group_by(Org, day_category) %>% tally()
 
 
 assam_time <- assam_time %>% 
-arrange(desc(day_category), na.rm = T) %>% 
+arrange(desc(day_category)) %>% 
 group_by(Org) %>% slice(1:10)
 
 ggplotly(assam_time %>% ggplot(aes(x=Org, fill = day_category)) + 
@@ -51,16 +51,5 @@ ggplotly(assam_time %>% ggplot(aes(x=Org, fill = day_category)) +
 
 
 ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear) + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='gray50')))
-```
-
-
-## Slide with R Output
-
-
-
-## Slide with Plot
-
-```{r pressure}
-plot(pressure)
 ```
 
