@@ -35,6 +35,7 @@ assam_tenders_published$publishedyear <- year(assam_tenders_published$published_
 
 assam_tenders_published <- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
 
+write.csv(assam_tenders_published, "assam_tenders_published.csv")
 assam_tenders_org <- assam_tenders_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) %>% top_n(n = 5, wt = total)
 
 tenders <- assam_tenders_org %>% top_n(5) %>% ggplot()+ aes(x = publishedyear, y=total)+ geom_bar(stat = "identity", position = "dodge",width = 0.7)

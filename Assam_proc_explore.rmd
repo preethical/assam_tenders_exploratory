@@ -1,0 +1,66 @@
+---
+title: "Untitled"
+author: "Preethi G"
+date: "12/05/2021"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE,
+                      fig.width = 9, 
+                      fig.height = 3.5, 
+                      fig.retina = 3,
+                      out.width = "100%")
+```
+
+## packages for exploring and importing the data
+```{r packages, echo = TRUE}
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(psych)
+assam_published <- read.csv("assam_tenders_published.csv", header = T)
+```
+
+##Looking at all the data
+- First let us the organizations that consistently spend on tenders in assam each year. 
+```{r initiallook, echo = TRUE}
+assam_org<- assam_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
+
+assam_org <- assam_org %>% 
+arrange(desc(total)) %>% 
+group_by(publishedyear) %>% slice(1:5)
+
+ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear) + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='gray50')))
+```
+- Next let us see which organizations took the longest time
+```{r initiallook1, echo = TRUE}
+assam_published$day_category <- cut(assam_published$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
+                                          breaks = c(0, 30, 60, Inf))
+
+assam_time<- assam_published %>% group_by(Org, day_category) %>% tally() 
+
+
+assam_time <- assam_time %>% 
+arrange(desc(day_category), na.rm = T) %>% 
+group_by(Org) %>% slice(1:10)
+
+ggplotly(assam_time %>% ggplot(aes(x=Org, fill = day_category)) + 
+  geom_bar() +theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+
+ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear) + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='gray50')))
+```
+
+
+## Slide with R Output
+
+
+
+## Slide with Plot
+
+```{r pressure}
+plot(pressure)
+```
+
