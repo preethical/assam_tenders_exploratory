@@ -32,7 +32,7 @@ assam_org <- assam_org %>%
 arrange(desc(total)) %>% 
 group_by(publishedyear) %>% slice(1:5)
 
-ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear) + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='gray50')))
+ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 ```
 - Next let us see which organizations took the longest time
 ```{r initiallook1, echo = TRUE}
@@ -43,13 +43,14 @@ assam_time<- assam_published %>% group_by(Org, day_category) %>% tally()
 
 
 assam_time <- assam_time %>% 
-arrange(desc(day_category)) %>% 
-group_by(Org) %>% slice(1:10)
+  na.omit() %>% 
+  arrange(desc(n)) %>% 
+  group_by(day_category) 
+  
 
-ggplotly(assam_time %>% ggplot(aes(x=Org, fill = day_category)) + 
-  geom_bar() +theme(axis.text.x = element_text(size = 6, angle = 90)))
+ggplotly(assam_time %>% ggplot(aes(x=Org, y = n, fill = day_category)) + 
+  geom_bar(stat = "identity") +theme(axis.text.x = element_text(size = 6, angle = 90)))
 
 
-ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear) + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='gray50')))
 ```
 
