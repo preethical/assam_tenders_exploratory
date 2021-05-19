@@ -20,37 +20,78 @@ library(tidyverse)
 library(ggplot2)
 library(plotly)
 library(psych)
+library(lubridate)
 assam_published <- read.csv("assam_tenders_published.csv", header = T)
 ```
 
 ##Looking at all the data
-- First let us the organizations that consistently spend on tenders in assam each year. 
+- First let us the organizations that consistently spend on tenders in Assam each year. The public works department has been the major spender across years in Assam followed by the National Health (PWD) department - mainly because of 2020-21 which some of the most expensive tenders but not as many of them. While in absolute numbers of tenders the Bodoland Council has a lot of tenders across years, the tenders do not amount to as much as the PWDs. 
+
 ```{r initiallook, echo = TRUE}
 assam_org<- assam_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
 
 assam_org <- assam_org %>% 
 arrange(desc(total)) %>% 
-group_by(publishedyear) %>% slice(1:5)
+group_by(publishedyear) 
 
-ggplotly(ggplot(data = assam_org, aes(x = Org, y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+ggplotly(ggplot(data = assam_org, aes(x = reorder(Org, -total), y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 ```
-- Next let us see which organizations took the longest time
+- Next let us see which organizations took the longest time between publishing a tender and opening the bid, which is a sign of efficiency. The bodoland council managed to complete this process within 60 days largely. The number of tenders completed within 60 days increased with time. The national healath mission was one which had over 60 days time period between publishing and bid opening. 
 ```{r initiallook1, echo = TRUE}
 assam_published$day_category <- cut(assam_published$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
                                           breaks = c(0, 30, 60, Inf))
 
-assam_time<- assam_published %>% group_by(Org, day_category) %>% tally() 
+assam_time<- assam_published %>% group_by(Org, day_category, publishedyear) %>% tally() 
 
 
 assam_time <- assam_time %>% 
   na.omit() %>% 
   arrange(desc(n)) %>% 
-  group_by(day_category) 
+  group_by(publishedyear,day_category) %>% slice (1:5)
   
 
-ggplotly(assam_time %>% ggplot(aes(x=Org, y = n, fill = day_category)) + 
-  geom_bar(stat = "identity") +theme(axis.text.x = element_text(size = 6, angle = 90)))
-
+ggplotly(assam_time %>% ggplot(aes(x= reorder (Org,-n), y = n, fill = day_category)) + 
+  geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free")+theme(axis.text.x = element_text(size = 6, angle = 90)))
 
 ```
+- We then see the numbers of tenders under different tendering stages across organizations and through the years. 
+```{r initiallook2, echo = TRUE}
+assam_stage <- assam_published %>% group_by( Org,tender_stage, publishedyear) %>%  tally ()
 
+assam_stage <- assam_stage %>% 
+arrange(desc(n)) %>% 
+group_by(publishedyear, tender_stage) %>% slice(1:5)
+
+ggplotly(ggplot(data = assam_stage, aes(x = reorder(Org, -n), y=n, fill = tender_stage)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+```
+Look to see what the distribution of tenders across organizations and tender status/stages are. 
+```{r initiallook3, echo = TRUE}
+assam_status <- assam_published %>% group_by(Org,tender_status, publishedyear) %>%  tally ()
+
+assam_status<- assam_status %>% 
+arrange(desc(n)) %>% 
+group_by(publishedyear, tender_status) %>% slice(1:5)
+
+ggplotly(ggplot(data = assam_status, aes(x = reorder(Org, -n), y=n, fill = tender_status)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+assam_published$stage_status_updated_on<- as.Date(assam_published$stage_status_updated_on, 
+                                                        format="%d-%b-%Y")
+
+assam_published$updatedyear<- year(assam_published$stage_status_updated_on)
+
+assam_status_year <- assam_published %>% group_by(Org,tender_status, updatedyear) %>%  tally ()
+
+assam_status_year<- assam_status_year %>% 
+arrange(desc(n)) %>% 
+group_by(updatedyear, tender_status) %>% slice(1:5)
+
+ggplotly(ggplot(data = assam_status_year, aes(x = reorder(Org, -n), y=n, fill = factor(updatedyear))) + geom_bar(stat = "identity") + facet_grid(~tender_status, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+```
+- Extract the medical tender data
+```{r initiallook4, echo = TRUE}
+
+text = c("NH DEPARTMENT", "NATIONAL HEALTH MISSION", "HEALTH AND FAMILY WELFARE DEPARTMENT")
+assam_health<- filter(assam_published, grepl('NH DEPARTMENT|NATIONAL HEALTH MISSION|HEALTH AND FAMILY WELFARE DEPARTMENT', Org))
+```
