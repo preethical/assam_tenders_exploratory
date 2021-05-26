@@ -103,28 +103,97 @@ group_by(status_year, tender_status) %>% slice(1:5)
 ggplotly(ggplot(data = assam_status, aes(x = reorder(Org, -n), y=n, fill = tender_status)) + geom_bar(stat = "identity") + facet_grid(~status_year, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 ```
 I am now trying to get the areas in assam from the list of tenders. 
-```{r initiallook5, echo = TRUE}
-assam_list <- read.csv("assam_list.csv", skip = 1, header=T)
+
+
+assam_list$Name <- toupper(assam_list$Name)
+assam_list$District <- toupper(assam_list$District)
 
 for(i in seq_len(nrow(assam_list))) {
-  want <- grepl(assam_list[i, "Name"], assam_published[,"tender_title"],ignore.case = T)
+  want <- grep(assam_list[i, "Name"], assam_published[,"tender_title"],ignore.case = T)
   assam_published[want, "Place"] <- assam_list[i, "Name"]
+}  
+for(i in seq_len(nrow(assam_list))) {
+  want <- grep(assam_list[i, "Name"], assam_published[,"Org"],ignore.case = T)
+  assam_published[want, "Place1"] <- assam_list[i, "Name"]
 }  
 
 for(i in seq_len(nrow(assam_list))) {
-  want <- grepl(assam_list[i, "Name"], assam_published[,"tender_reference_no"],ignore.case = T)
-  assam_published[want, "Place1"] <- assam_list[i, "Name"]
+  want <- grep(assam_list[i, "Name"], assam_published[,"tender_reference_no"],ignore.case = T)
+  assam_published[want, "Place2"] <- assam_list[i, "Name"]
 }  
 
 newtable <- assam_published %>% filter(is.na(Place))
 newtable_1 <- newtable %>% filter(is.na(Place1))
+newtable_2 <- newtable_1 %>% filter(is.na(Place2))
+
 
 for(i in seq_len(nrow(assam_list))) {
   want <- grepl(assam_list[i, "District"], newtable_1[,"tender_title"],ignore.case = T)
   newtable_1[want, "Place3"] <- assam_list[i, "District"]
 }  
 
-newtable2 <- newtable_1%>% filter(is.na(Place3))
+newtable2 <- newtable_1 %>% filter(is.na(Place3))
+
+```{r initiallook5, echo = TRUE}
+
+assam_list <- read.csv("assam_list.csv", skip = 1, header=T)
+nameinstate <-  lapply(
+   assam_list$Name,
+   function(i){
+      place = grepl(x = tolower(assam_published$tender_title), pattern = tolower(i))
+      if (sum(place) > 0) {
+         data.frame(
+            assam_published_1 = assam_published[place,],
+            i = i
+         )
+      } else {
+         data.frame(
+           assam_published_1= assam_published[,],
+           i = "N/A"
+         )
+      }
+   }
+)
+
+assam_published<- do.call(rbind, nameinstate)
+
+nameinstate2 <-  lapply(
+   assam_list$Name,
+   function(y){
+      place = grepl(x = tolower(assam_published$tender_reference_no), pattern = tolower(y))
+      if (sum(place) > 0) {
+         data.frame(
+            assam_published = assam_published[place,],
+            y = y
+         )
+      } else {
+         data.frame(
+           assam_published_1= assam_published[,],
+           y = "N/A"
+         )
+      }
+   }
+)
+assam_published <- do.call(rbind, nameinstate2)
+
+nameinstate3 <-  lapply(
+   assam_list$Name,
+   function(x){
+      place = grepl(x = tolower(assam_published$Org), pattern = tolower(x))
+      if (sum(place) > 0) {
+         data.frame(
+            assam_published = assam_published[place,],
+            x = x
+         )
+      } else {
+         data.frame(
+           assam_published_1= assam_published[,],
+           x = "N/A"
+         )
+      }
+   }
+)
+assam_published <- do.call(rbind, nameinstate3)
 
 
 ```
