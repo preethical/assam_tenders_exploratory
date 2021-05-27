@@ -1,3 +1,9 @@
+## Think of other useful comparisons to make. 
+## next things to do - make it work with just one drop down filled out, make it work by separating out the comparators, 
+#Think of other comparisons to make 
+#add aoc data stuff
+
+
 library(shiny)
 library(tidyverse)
 library(ggplot2)
