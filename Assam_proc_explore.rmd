@@ -71,13 +71,11 @@ assam_published$stage_status_updated_on<- as.Date(assam_published$stage_status_u
                                                         format="%d-%b-%Y")
 assam_published$status_year <- year(assam_published$stage_status_updated_on)
 
-
-
 assam_stage_1 <-  assam_published %>% group_by(Org,tender_status,tender_stage, publishedyear) %>%  tally ()
 
 assam_stage_1 <- assam_stage_1 %>% arrange(desc(n)) %>% group_by(tender_status,tender_stage, publishedyear)
 
-ggplotly(ggplot(data = assam_stage_1, aes(x = tender_stage, y=n, fill = tender_status)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+ggplotly(ggplot(data = assam_stage_1, aes(x = tender_stage, y=n, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 ```
 
 ##*If we look for the same distribution across organizations. The following is noted. PWD roads has the most number of tenders that are published and not AOC-ed. Most of them are in technical evaluation or financial bid opening.* 
