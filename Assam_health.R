@@ -1,6 +1,11 @@
-
+## next steps include extracting only village and district level information from names, getting a unique set of values? and mapping it to existing dataset 
 #First I attempt to get places associated with the tender - currently only a 1000 show up
-assam_list <- read.csv("assam_list.csv", skip = 1, header=T)
+assam_published <- read.csv("assam_tenders_published.csv", header = T)
+assam_list <- read.csv("Census Combined (all in one sheet) - All together.csv",  header=T)
+
+assam_list <- assam_list %>% filter (Level == "VILLAGE")
+assam_list$Name <- gsub("\\)|\\(", "", assam_list$Name)
+
 nameinstate <-  lapply(
   assam_list$Name,
   function(i){

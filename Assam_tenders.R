@@ -4,6 +4,7 @@ library(readxl)
 library(janitor)
 library(stringr)
 
+setwd("~/Documents/R_things/assam_tenders_exploratory")
 #import, merge, remove duplicates and clean each sheet
 assam_files <- list.files(pattern = "*.xls")
 
@@ -33,16 +34,18 @@ assam_tenders_published$price_bid_opening_date <- as.Date(assam_tenders_publishe
 
 assam_tenders_published$publishedyear <- year(assam_tenders_published$published_date)
 
-assam_tenders_published <- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
+#assam_tenders_published <- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
 
-write.csv(assam_tenders_published, "assam_tenders_published.csv")
-assam_tenders_org <- assam_tenders_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) %>% top_n(n = 5, wt = total)
 
-tenders <- assam_tenders_org %>% top_n(5) %>% ggplot()+ aes(x = publishedyear, y=total)+ geom_bar(stat = "identity", position = "dodge",width = 0.7)
+#write.csv(assam_tenders_published, "assam_tenders_published.csv")
 
-ggplot(assam_tenders_org, aes(x = Org, y = total)) +
-         geom_col() +
-         facet_grid(.~publishedyear, scales = "free")
+#assam_tenders_org <- assam_tenders_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) %>% top_n(n = 5, wt = total)
+
+#tenders <- assam_tenders_org %>% top_n(5) %>% ggplot()+ aes(x = publishedyear, y=total)+ geom_bar(stat = "identity", position = "dodge",width = 0.7)
+
+#ggplot(assam_tenders_org, aes(x = Org, y = total)) +
+#         geom_col() +
+#         facet_grid(.~publishedyear, scales = "free")
 
 #in Progress
 assam_tenders_progress <- lapply(assam_files, function(i){
@@ -118,13 +121,32 @@ assam_tenders_aoc$bid_opening_date<- as.Date(assam_tenders_aoc$bid_opening_date,
                                                 format="%d-%b-%Y")
 assam_tenders_aoc$date_of_award_of_contract <- as.Date(assam_tenders_aoc$date_of_award_of_contract,
                                                        format="%d-%b-%Y" )
+assam_tenders_aoc$price_bid_opening_date<- as.Date(assam_tenders_aoc$price_bid_opening_date,
+                                                       format="%d-%b-%Y" )
 
 assam_tenders_aoc$publishedyear <- year(assam_tenders_aoc$published_date)
 
+assam_tenders_merge<- merge(assam_tenders_published, 
+                                assam_tenders_aoc[c("date_of_award_of_contract","awarded_price_in_rs")], 
+                                all.x = T)
+
+
+
+assam_tenders_published<- 
+  assam_tenders_published[!duplicated(assam_tenders_published[2]),]
+
+
+assam_tenders_published<- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
+assam_tenders_published$aocdate<- assam_tenders_published$date_of_award_of_contract - assam_tenders_published$published_date
+
 #merge all these sheets to produce a master one
 
-assam_tender_merged <- do.call (merge, list(assam_tenders_published, assam_tenders_progress,assam_tenders_noresp, assam_tenders_aoc))
-assam_tender_merged<- 
-  assam_tender_merged[!duplicated(assam_tender_merged[2]),] 
-  
 
+#assam_tender_merged <- do.call ("merge", list(assam_tender_merged, assam_tenders_noresp))
+#assam_tender_merged <- do.call("merge", list(assam_tender_merged,assam_tenders_aoc))
+
+assam_tenders_published<- 
+  assam_tenders_published[!duplicated(assam_tenders_published[2]),] 
+  
+write.csv(assam_tender_merged, "assam_merged.csv")
+write.csv(assam_tenders_aoc, "assam_aoc.csv")
