@@ -10,8 +10,7 @@ library(plotly)
 library(psych)
 library(lubridate)
 setwd("~/Documents/R_things/assam_tenders_exploratory/assam_tenders")
-assam_published <- read.csv("assam_tenders_published.csv", header = T)
-assam_aoc <- read.csv("assam_aoc.csv", header = T)
+assam_published <- read.csv("assam_merge.csv", header = T)
 
 
 ui <- fluidPage(titlePanel("Basic Exploratory Dashboard"),
@@ -35,14 +34,14 @@ ui <- fluidPage(titlePanel("Basic Exploratory Dashboard"),
             
 server <- function(input, output, session) {
     output$Org_output <- renderUI ({
-        selectizeInput("input_Org", label="Organization", choices =  sort(unique(assam_published$Org)), 
+        selectizeInput("input_Org", label="Organization", choices =  sort(unique(assam_published$Org.x)), 
                        multiple = TRUE, selected = NULL)
     })
         filtered <- reactive({
             if (is.null(input$input_Org)) {
                 return()
             } 
-        assam_published %>% filter(Org %in% input$input_Org)
+        assam_published %>% filter(Org.x %in% input$input_Org)
         })
 
  ##Number of tenders plot       
@@ -50,13 +49,13 @@ server <- function(input, output, session) {
             if(input$KPI == "Number of tenders"){
             output$number_plot <- renderPlotly ({
                  if (is.null(filtered())) {
-                     return(ggplotly(ggplot(data = assam_published, aes(x =publishedyear)) + 
-                                            geom_bar() + facet_grid(~tender_category, scales = "free") + 
+                     return(ggplotly(ggplot(data = assam_published, aes(x = as.character(publishedyear.x))) + 
+                                            geom_bar() + facet_grid(~tender_category.x, scales = "free") + 
                                             theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     }
                  else 
-                     return (ggplotly(ggplot(data = filtered(), aes(x = publishedyear)) + 
-                                 geom_bar() + facet_grid(~tender_category, scales = "free") + 
+                     return (ggplotly(ggplot(data = filtered(), aes(x = as.character(publishedyear.x))) + 
+                                 geom_bar() + facet_grid(~tender_category.x, scales = "free") + 
                                  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     
             })  
@@ -70,13 +69,13 @@ server <- function(input, output, session) {
             if(input$KPI == "Tender Stage"){
             output$tender_stage_plot <- renderPlotly({
                     if (is.null(filtered())) {
-                        return(ggplotly(ggplot(data = assam_published, aes(x = publishedyear,fill = tender_status)) + 
-                                            geom_bar(position = "dodge") + facet_grid(~tender_category, scales = "free") + 
+                        return(ggplotly(ggplot(data = assam_published, aes(x = as.character(publishedyear.x),fill = tender_status)) + 
+                                            geom_bar(position = "dodge") + facet_grid(~tender_category.x, scales = "free") + 
                                             theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     }
                     else
-                        return (ggplotly(ggplot(data = filtered(), aes(x = publishedyear,fill = tender_status)) + 
-                                 geom_bar(position = "dodge") + facet_grid(~tender_category, scales = "free") + 
+                        return (ggplotly(ggplot(data = filtered(), aes(x = as.character(publishedyear.x),fill = tender_status)) + 
+                                 geom_bar(position = "dodge") + facet_grid(~tender_category.x, scales = "free") + 
                                  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     })
                 output$results <- renderTable({
@@ -85,29 +84,19 @@ server <- function(input, output, session) {
             }
             })
         ##bids received plot
-        output$Org_output <- renderUI ({
-            selectizeInput("input_Org", label="Organization", choices =  sort(unique(assam_published$Org)), 
-                           multiple = TRUE, selected = NULL)
-        })
-        filtered <- reactive({
-            if (is.null(input$input_Org)) {
-                return()
-            } 
-            assam_published %>% filter(Org %in% input$input_Org)
-        })
         observeEvent(input$DatabyPage,{
             if(input$KPI == "Number of bids received"){
             output$bids_recieved<- renderPlotly({
                     if (is.null(filtered())) {
-                        return(ggplotly(ggplot(data = assam_published, aes(x = publishedyear, y = no_of_bids_received)) + 
+                        return(ggplotly(ggplot(data = assam_published, aes(x = as.character(publishedyear.x), y = no_of_bids_received.x)) + 
                                             geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                                         outlier.size=4)+facet_grid(~tender_category, scales = "free")+ 
+                                                         outlier.size=4)+facet_grid(~tender_category.x, scales = "free")+ 
                                             theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     }
                     else 
-                        return (ggplotly(ggplot(data = filtered(), aes(x = publishedyear, y = no_of_bids_received)) + 
+                        return (ggplotly(ggplot(data = filtered(), aes(x = as.character(publishedyear.x), y = no_of_bids_received.x)) + 
                                  geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                              outlier.size=4)+ facet_grid(~tender_category, scales = "free")))
+                                              outlier.size=4)+ facet_grid(~tender_category.x, scales = "free")))
                     })
                 output$results <- renderTable({
                         filtered()
@@ -121,15 +110,15 @@ server <- function(input, output, session) {
             if(input$KPI == "Number of days for AOC"){
                 output$AOC_days<- renderPlotly({
                     if (is.null(filtered())) {
-                        return(ggplotly(ggplot(data = assam_aoc, aes(x = publishedyear, y = aocdate)) + 
+                        return(ggplotly(ggplot(data = subset(assam_published,!is.na(aocdate)), aes(x = as.character(publishedyear.x), y = aocdate)) + 
                                             geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                                         outlier.size=4)+facet_grid(~tender_category, scales = "free") +
+                                                         outlier.size=4)+facet_grid(~tender_category.x, scales = "free") +
                                             theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     }
                     else
-                        return(ggplotly(ggplot(data = filtered(), aes(x = publishedyear, y = aocdate)) + 
+                        return(ggplotly(ggplot(data = subset(filtered(),!is.na(aocdate)), aes(x = as.character(publishedyear.x), y = aocdate)) + 
                                             geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                                         outlier.size=4)+ facet_grid(~tender_category, scales = "free")))
+                                                         outlier.size=4)+ facet_grid(~tender_category.x, scales = "free")))
                 })
                 output$results <- renderTable({
                     filtered()
@@ -137,29 +126,19 @@ server <- function(input, output, session) {
             }  
         })
             ##Number of days for prizebid
-        output$Org_output <- renderUI ({
-            selectizeInput("input_Org", label="Organization", choices =  sort(unique(assam_published$Org)), 
-                           multiple = TRUE, selected = NULL)
-        })
-        filtered <- reactive({
-            if (is.null(input$input_Org)) {
-                return()
-            } 
-            assam_published %>% filter(Org %in% input$input_Org)
-        })
          observeEvent(input$DatabyPage,{
             if(input$KPI == "Number of days for prize bid"){
             output$AOC_days2<- renderPlotly({
                     if (is.null(filtered())) {
-                        return(ggplotly(ggplot(data = subset(assam_published,!is.na(cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)), aes(x = publishedyear, y = cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)) + 
+                        return(ggplotly(ggplot(data = subset(assam_published,!is.na(cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)), aes(x = as.character(publishedyear.x), y = cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)) + 
                                             geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                                         outlier.size=4)+facet_grid(~tender_category, scales = "free") +
+                                                         outlier.size=4)+facet_grid(~tender_category.x, scales = "free") +
                                             theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                     }
                     else
-                        return(ggplotly(ggplot(data = subset(filtered(),!is.na(cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)), aes(x = publishedyear, y = cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)) + 
+                        return(ggplotly(ggplot(data = subset(filtered(),!is.na(cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)), aes(x = as.character(publishedyear.x), y = cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days)) + 
                                  geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                              outlier.size=4)+ facet_grid(~tender_category, scales = "free")))
+                                              outlier.size=4)+ facet_grid(~tender_category.x, scales = "free")))
                                     })
             output$results <- renderTable({
                 filtered()
@@ -168,29 +147,20 @@ server <- function(input, output, session) {
       })
          
          ##Number of days for eval
-         output$Org_output <- renderUI ({
-             selectizeInput("input_Org", label="Organization", choices =  sort(unique(assam_published$Org)), 
-                            multiple = TRUE, selected = NULL)
-         })
-         filtered <- reactive({
-             if (is.null(input$input_Org)) {
-                 return()
-             } 
-             assam_published %>% filter(Org %in% input$input_Org)
-         })
+ 
          observeEvent(input$DatabyPage,{
              if(input$KPI == "Number of days for evaluation"){
                  output$Evaluation_days<- renderPlotly({
                      if (is.null(filtered())) {
-                         return(ggplotly(ggplot(data = subset(assam_published,!is.na(no_of_days_b_w_tech_and_finance_opening)), aes(x = publishedyear, y = no_of_days_b_w_tech_and_finance_opening)) + 
+                         return(ggplotly(ggplot(data = subset(assam_published,!is.na(no_of_days_b_w_tech_and_finance_opening)), aes(x = as.character(publishedyear.x), y = no_of_days_b_w_tech_and_finance_opening)) + 
                                              geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                                          outlier.size=4)+facet_grid(~tender_category, scales = "free") +
+                                                          outlier.size=4)+facet_grid(~tender_category.x, scales = "free") +
                                              theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black'))))
                      }
                      else
-                         return(ggplotly(ggplot(data = subset(filtered(),!is.na(no_of_days_b_w_tech_and_finance_opening)), aes(x = publishedyear, y = no_of_days_b_w_tech_and_finance_opening)) + 
+                         return(ggplotly(ggplot(data = subset(filtered(),!is.na(no_of_days_b_w_tech_and_finance_opening)), aes(x = as.character(publishedyear.x), y = no_of_days_b_w_tech_and_finance_opening)) + 
                                              geom_boxplot(outlier.colour="red", outlier.shape=8,
-                                                          outlier.size=4)+ facet_grid(~tender_category, scales = "free")))
+                                                          outlier.size=4)+ facet_grid(~tender_category.x, scales = "free")))
                  })
                  output$results <- renderTable({
                      filtered()

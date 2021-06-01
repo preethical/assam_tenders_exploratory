@@ -34,10 +34,10 @@ assam_tenders_published$price_bid_opening_date <- as.Date(assam_tenders_publishe
 
 assam_tenders_published$publishedyear <- year(assam_tenders_published$published_date)
 
-#assam_tenders_published <- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
+assam_tenders_published <- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
 
 
-#write.csv(assam_tenders_published, "assam_tenders_published.csv")
+write.csv(assam_tenders_published, "assam_tenders_published.csv")
 
 #assam_tenders_org <- assam_tenders_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) %>% top_n(n = 5, wt = total)
 
@@ -125,9 +125,14 @@ assam_tenders_aoc$price_bid_opening_date<- as.Date(assam_tenders_aoc$price_bid_o
                                                        format="%d-%b-%Y" )
 
 assam_tenders_aoc$publishedyear <- year(assam_tenders_aoc$published_date)
+assam_tenders_aoc<- assam_tenders_aoc %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
+assam_tenders_aoc$aocdate<- assam_tenders_aoc$date_of_award_of_contract - assam_tenders_aoc$published_date
+
+write.csv(assam_tenders_aoc, "assam_aoc.csv")
+
 
 assam_tenders_merge<- merge(assam_tenders_published, 
-                                assam_tenders_aoc[c("date_of_award_of_contract","awarded_price_in_rs")], 
+                                assam_tenders_aoc[c("date_of_award_of_contract","awarded_price_in_rs", "aocdate")], 
                                 all.x = T)
 
 
@@ -136,8 +141,7 @@ assam_tenders_published<-
   assam_tenders_published[!duplicated(assam_tenders_published[2]),]
 
 
-assam_tenders_published<- assam_tenders_published %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
-assam_tenders_published$aocdate<- assam_tenders_published$date_of_award_of_contract - assam_tenders_published$published_date
+
 
 #merge all these sheets to produce a master one
 

@@ -21,7 +21,12 @@ library(ggplot2)
 library(plotly)
 library(psych)
 library(lubridate)
-assam_published <- read.csv("assam_tenders_published.csv", header = T)
+assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
+assam_oc <- read.csv("assam_aoc.csv", header = T, stringsAsFactors = F)
+
+assam_merge <- left_join(assam_published,assam_oc, by = "tender_id")
+assam_merge <- assam_merge[ -c(35:57) ]
+write.csv(assam_merge, "assam_merge.csv")
 ```
 
 ##*Looking at all the data*
