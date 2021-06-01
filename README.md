@@ -4,12 +4,12 @@ This repository stores all information regarding the public contracting informat
 
 ## Table of Contents  
 
-* Background - We recieved 5 years worth of public procurement data from Assam and we are trying to identify insights from this dataset. 
-* In order to this, we first need to load, clean and prep the data. 
-* Methodology  
+- **Background** - We recieved 5 years worth of public procurement data from Assam and we are trying to identify insights from this dataset. 
+In order to this, we first need to load, clean and prep the data. 
+- **Methodology**  
     - Once you recieve the data. Saves the files in your working directory and clone and run the **Assam_tenders.R file**. This file will load the datasets, convert all the dates to the date-time format, clean up all the column names and then merge the different years into 4 files - published tenders, AOC tenders, inprogress, and stopped. Split the org chain into organization/Role and add a published year.  
     - Exploratory analysis - Once this is completed, run the **assam_proc_explore.rmd** file to see an ios ppt of the data and the initial exploration with the data. This file also contains the code to write the merge file to be used next - assam_merge.csv  
-    - Shiny APP: The App.R is a file with UI & Server files and running it along with the assam_merge.csv will result in a simple dashboard which takes organization names as input and gives the organizations performance across tender category and year as well as a table with the data.  
+    - Shiny APP: The **App.R** is a file with UI & Server files and running it along with the assam_merge.csv will result in a simple dashboard which takes organization names as input and gives the organizations performance across tender category and year as well as a table with the data.  
  
  ### Next steps     
  - Add comparators between organizations  
