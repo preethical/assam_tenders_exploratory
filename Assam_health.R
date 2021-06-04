@@ -1,11 +1,52 @@
 ## next steps include extracting only village and district level information from names, getting a unique set of values? and mapping it to existing dataset 
 #First I attempt to get places associated with the tender - currently only a 1000 show up
-assam_published <- read.csv("assam_tenders_published.csv", header = T)
-assam_list <- read.csv("Census Combined (all in one sheet) - All together.csv",  header=T)
+library(dplyr)
+library(stringi)
+library(tidyverse)
+assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
+assam_list <- read.csv("Census Combined (all in one sheet) - All together.csv",  header=T, stringsAsFactors = F)
+assam_list1 <- read.csv("assam_list.csv", stringsAsFactors = F)
 
 assam_list <- assam_list %>% filter (Level == "VILLAGE")
 assam_list$Name <- gsub("\\)|\\(", "", assam_list$Name)
+assam_published$tender_title <- gsub("\\)|\\(", "", assam_published$tender_title)
 
+#Method 1
+idx2 <- sapply(assam_published$tender_title, grep, assam_list$Name)
+idx1 <- sapply(seq_along(idx2), function(i) rep(i, length(idx2[[i]])))
+assam_published_1<- cbind(assam_published[unlist(idx1),,drop=F], assam_list$Name[unlist(idx2),,drop=F])
+
+ff = function(x, patterns, replacements = patterns, fill = NA, ...)
+{
+  stopifnot(length(patterns) == length(replacements))
+  
+  ans = rep_len(as.character(fill), length(x))    
+  empty = seq_along(x)
+  
+  for(i in seq_along(patterns)) {
+    greps = grepl(patterns[[i]], x[empty], ...)
+    ans[empty[greps]] = replacements[[i]]  
+    empty = empty[!greps]
+  }
+  
+  return(ans)
+}
+
+#Method 2
+newtable <- assam_published%>% 
+  filter_all(any_vars(str_detect(.,paste(assam_list$Name, collapse = "|"))))
+
+for(i in seq_len(nrow(assam_list))) {
+  want <- grepl(assam_list[i, "Name"], assam_published[,"tender_title"],ignore.case = T)
+  assam_published[want, "Region"] <- assam_list[i, "Name"]
+}  
+
+## Method 
+assam_published <- assam_published %>%
+  merge(assam_list$Name) %>%
+  filter(tender_title %>% stri_detect_fixed(assam_list$Name))
+
+#Method 3
 nameinstate <-  lapply(
   assam_list$Name,
   function(i){
