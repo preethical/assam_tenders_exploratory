@@ -16,6 +16,8 @@ idx2 <- sapply(assam_published$tender_title, grep, assam_list$Name)
 idx1 <- sapply(seq_along(idx2), function(i) rep(i, length(idx2[[i]])))
 assam_published_1<- cbind(assam_published[unlist(idx1),,drop=F], assam_list$Name[unlist(idx2),,drop=F])
 
+
+#method3
 ff = function(x, patterns, replacements = patterns, fill = NA, ...)
 {
   stopifnot(length(patterns) == length(replacements))
@@ -32,19 +34,10 @@ ff = function(x, patterns, replacements = patterns, fill = NA, ...)
   return(ans)
 }
 
-#Method 2
-newtable <- assam_published%>% 
-  filter_all(any_vars(str_detect(.,paste(assam_list$Name, collapse = "|"))))
 
-for(i in seq_len(nrow(assam_list))) {
-  want <- grepl(assam_list[i, "Name"], assam_published[,"tender_title"],ignore.case = T)
-  assam_published[want, "Region"] <- assam_list[i, "Name"]
-}  
 
-## Method 
-assam_published <- assam_published %>%
-  merge(assam_list$Name) %>%
-  filter(tender_title %>% stri_detect_fixed(assam_list$Name))
+
+
 
 #Method 3
 nameinstate <-  lapply(
@@ -104,6 +97,7 @@ nameinstate3 <-  lapply(
   }
 )
 assam_published <- do.call(rbind, nameinstate3)
+
 
 
 ##Then I Extract the medical tender data

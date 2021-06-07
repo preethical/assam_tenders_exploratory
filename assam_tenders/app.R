@@ -9,7 +9,7 @@ library(ggplot2)
 library(plotly)
 library(psych)
 library(lubridate)
-setwd("~/Documents/R_things/assam_tenders_exploratory/assam_tenders")
+#setwd("~/Documents/R_things/assam_tenders_exploratory/assam_tenders") ##change this to wherever your local files are
 assam_published <- read.csv("assam_merge.csv", header = T)
 
 

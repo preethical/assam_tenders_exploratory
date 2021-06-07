@@ -1,0 +1,77 @@
+---
+title: "Attempts to merge"
+author: "Preethi G"
+date: "06/06/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Attempts to merge
+
+This is an R Markdown document. It consists of different attempts to merge the public procurement data with the census data in order to give locations for the different procurement along with issues for each of them. 
+
+To begin with we first load the files. To run this piece of code, you need two files - assam_tenders_published.csv and census combined (all in one sheet) - all together.csv. Both of these are found [here](https://drive.google.com/drive/u/0/folders/1NOOBMgr-0P_Gu3NMd89BSIk07_7ALo13). After which we remove the parenthesis from the files, since some of them have incomplete parathesis which proves to be a problem later. We also filter the census data by village. 
+
+```{r Loadfiles}
+library(dplyr)
+library(stringi)
+library(tidyverse)
+assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
+assam_list <- read.csv("Census Combined (all in one sheet) - All together.csv",  header=T, stringsAsFactors = F)
+assam_list1 <- read.csv("assam_list.csv", stringsAsFactors = F)
+assam_list <- assam_list %>% filter (Level == "VILLAGE")
+assam_list$Name <- gsub("\\)|\\(", "", assam_list$Name)
+assam_published$tender_title <- gsub("\\)|\\(", "", assam_published$tender_title)
+```
+
+## Method 1 - create a loop and search for name in tender title and get name and add it to a column called region. This works but only gets the latest name from the census data not all of them. Items like path, sea have a lot of false positives.
+```{r method1, echo=FALSE}
+for(i in seq_len(nrow(assam_list))) {
+  want <- grepl(assam_list[i, "Name"], assam_published[,"tender_title"],ignore.case = T)
+  assam_published[want, "Region"] <- assam_list[i, "Name"]
+}  
+```
+
+## Method 2
+This method creates a loop(lapply), creates an empty column place and we search across Name (in census sheet) to look for matches with tender title. And then bind it to the existing table
+
+```{r method3, echo=FALSE}
+nameinstate <-  lapply(
+  assam_list$Name,
+  function(i){
+    place = grepl(x = tolower(assam_tenders_aoc$tender_title), pattern = tolower(i))
+    if (sum(place) > 0) {
+      data.frame(
+        assam_tenders_aoc = assam_tenders_aoc[place,],
+        i = i
+      )
+    } else {
+      data.frame(
+        assam_tenders_aoc= assam_tenders_aoc[,],
+        i = "N/A"
+      )
+    }
+  }
+)
+
+assam_tenders_aoc<- do.call(rbind, nameinstate)
+```
+
+## method 3
+```{r method3, echo = FALSE}
+for (i in 1: length(assam_list_name)) {
+  assam_published[grep(assam_list_name[i], assam_published$tender_title), "Region"] <- assam_list_name[i]
+}
+assam_published
+```
+
+##method 4
+
+```{r method4, echo = FALSE}
+library(data.table)
+setDT(assam_published)
+assam_published[, region := fifelse(tender_title %in% assam_list$Name, 'assam_list$Name', 'NA')]
+```
