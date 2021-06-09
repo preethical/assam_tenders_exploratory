@@ -19,10 +19,9 @@ To begin with we first load the files. To run this piece of code, you need two f
 library(dplyr)
 library(stringi)
 library(tidyverse)
-assam_published <- read.csv("assam_tenders/assam_tenders_published.csv", header = T, stringsAsFactors = F)
-assam_list <- read.csv("assam_tenders/Census Combined (all in one sheet) - All together.csv",  header=T, stringsAsFactors = F)
-assam_list1 <- read.csv("assam_tenders/assam_list.csv", stringsAsFactors = F)
-assam_list <- assam_list %>% filter (Level == "VILLAGE")
+assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
+assam_list <- read.csv("Census Combined (all in one sheet) - All together.csv",  header=T, stringsAsFactors = F)
+assam_list1 <- read.csv("assam_list.csv", stringsAsFactors = F)
 assam_list$Name <- gsub("\\)|\\(", "", assam_list$Name)
 assam_published$tender_title <- gsub("\\)|\\(", "", assam_published$tender_title)
 ```
@@ -44,16 +43,20 @@ for(i in 1:length(assam_list_unique)) {
   track_progress$tick()
   # print(glue("{i} -- {unique(grepl(pattern = assam_list_unique[[i]], x = assam_published$tender_title,ignore.case = T))}"))
   
-  want <- which(grepl(pattern = assam_list_unique[[i]], x = assam_published$tender_title,ignore.case = T) == TRUE)
+  want <- which(grepl(pattern=assam_list_unique[[i]], x = assam_published$tender_title, ignore.case = T) == TRUE)
   
   # Assign region to tender ID's. We're not updating the assam_published dataframe directly, because in-case there multiple regions associated with the tender ID, then updating it directly will only update the region identified at last. So to preserve the values for all regions, we're creating a new dataframe that will store the region information for every tender id. 
   if(length(want)>=1){
-  tender_id_region <- data.frame(tender_id = assam_published$tender_id[want],tender_region = assam_list_unique[[i]])
+  tender_id_region <- data.frame(tender_id = assam_published$tender_id[want],(tender_region = assam_list_unique[[i]]))
   tender_region_df <- bind_rows(tender_region_df, tender_id_region)
   }
   }
-
+df1 <- aggregate(tender_region_df[2], tender_region_df[-2], unique)
+assam_new <- left_join(assam_published, df1, by = "tender_id")
+assam_new$X.tender_region...assam_list_unique..i... <- as.character(assam_new$X.tender_region...assam_list_unique..i...)
+write.csv(assam_new, "assam_tender_title.csv")
 ```
+
 
 ## Method 2
 This method creates a loop(lapply), creates an empty column place and we search across Name (in census sheet) to look for matches with tender title. And then bind it to the existing table
@@ -68,12 +71,12 @@ check_namese <- function(assam_list_name){
     place = which(grepl(x = tolower(assam_published$tender_title), pattern = tolower(assam_list_name))==TRUE)
     if (length(place) >= 1) {
       data.frame(
-        assam_tenders_aoc = assam_tenders_aoc[place,],
+        assam_published = assam_published[place,],
         i = i
       )
     } else {
       data.frame(
-        assam_tenders_aoc = assam_tenders_aoc[,],
+        assam_published = assam_published[,],
         i = "N/A"
       )
     }
@@ -84,7 +87,7 @@ nameinstate <-  lapply(
   
 )
 
-assam_tenders_aoc<- do.call(rbind, nameinstate)
+assam_published<- do.call(rbind, nameinstate)
 ```
 
 ## method 3
