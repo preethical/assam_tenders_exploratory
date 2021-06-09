@@ -75,3 +75,23 @@ library(data.table)
 setDT(assam_published)
 assam_published[, region := fifelse(tender_title %in% assam_list$Name, 'assam_list$Name', 'NA')]
 ```
+
+
+```{r method5, echo = FALSE}
+#method3
+ff = function(x, patterns, replacements = patterns, fill = NA, ...)
+{
+  stopifnot(length(patterns) == length(replacements))
+  
+  ans = rep_len(as.character(fill), length(x))    
+  empty = seq_along(x)
+  
+  for(i in seq_along(patterns)) {
+    greps = grepl(patterns[[i]], x[empty], ...)
+    ans[empty[greps]] = replacements[[i]]  
+    empty = empty[!greps]
+  }
+  
+  return(ans)
+}
+```
