@@ -105,3 +105,14 @@ group_by(status_year, tender_status) %>% slice(1:5)
 
 ggplotly(ggplot(data = assam_status, aes(x = reorder(Org, -n), y=n, fill = tender_status)) + geom_bar(stat = "identity") + facet_grid(~status_year, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 ```
+
+```{r initiallook6, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+assam_tenders_aoc <- assam_tenders_aoc %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
+assam_bids <- assam_tenders_aoc %>% group_by(Org,no_of_bids_received) %>% summarise(total = sum(awarded_price_in_rs, na.rm = TRUE))
+
+assam_bids<- assam_bids %>% 
+arrange(desc(n)) %>% 
+group_by(Org, tender_status) %>% slice(1:5)
+
+ggplotly(ggplot(data = assam_bids, aes(x = Org, y=total, fill = no_of_bids_received)) + geom_bar(stat = "identity") +  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+

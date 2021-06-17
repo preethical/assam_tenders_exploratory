@@ -19,6 +19,8 @@ To begin with we first load the files. To run this piece of code, you need two f
 library(dplyr)
 library(stringi)
 library(tidyverse)
+library(tm)
+library(qdapTools)
 assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
 assam_list <- read.csv("Census Combined (all in one sheet) - All together.csv",  header=T, stringsAsFactors = F)
 assam_list1 <- read.csv("assam_list.csv", stringsAsFactors = F)
@@ -30,7 +32,13 @@ assam_published$tender_title <- gsub("\\)|\\(", "", assam_published$tender_title
 
 
 ```{r method1, echo=FALSE}
-assam_list_unique <- assam_list[, "Name"] %>% unique()
+assam_list_unique <- unique(str_extract_all(assam_list$Name, boundary("word")))
+assam_list_unique <- gsub("\\b[[:alpha:]]{1,3}\\b","", assam_list_unique)
+assam_list_unique <- removeNumbers(assam_list_unique)
+assam_list_unique <- gsub("^ +| +$|( ) +", "\\1", assam_list_unique)
+#assam_list_unique<- as.list(strsplit(assam_list_unique," "))
+assam_list_unique <- assam_list_unique %>% unique()
+#assam_list_unique <- paste0('\\b',assam_list_unique, '\\b', collapse = '|')
 assam_published$Region <- ""
 tender_region_df <- c()
 track_progress <- progress::progress_bar$new(total = length(assam_list_unique))
@@ -43,7 +51,7 @@ for(i in 1:length(assam_list_unique)) {
   track_progress$tick()
   # print(glue("{i} -- {unique(grepl(pattern = assam_list_unique[[i]], x = assam_published$tender_title,ignore.case = T))}"))
   
-  want <- which(grepl(pattern=assam_list_unique[[i]], x = assam_published$tender_title, ignore.case = T) == TRUE)
+  want <- which(grepl(pattern=(assam_list_unique[[i]]), x = assam_published$tender_title, ignore.case = T) == TRUE)
   
   # Assign region to tender ID's. We're not updating the assam_published dataframe directly, because in-case there multiple regions associated with the tender ID, then updating it directly will only update the region identified at last. So to preserve the values for all regions, we're creating a new dataframe that will store the region information for every tender id. 
   if(length(want)>=1){
