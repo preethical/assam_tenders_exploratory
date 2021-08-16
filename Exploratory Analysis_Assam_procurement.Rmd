@@ -1,0 +1,146 @@
+---
+title: "Exploratory analysis_assam_procurement"
+author: "Preethi G"
+date: "16/08/2021"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE,
+                      message = FALSE,
+                      fig.width = 9, 
+                      fig.height = 3.5, 
+                      fig.retina = 3,
+                      out.width = "100%")
+```
+
+```{r packages, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+library(tidyverse)
+library(ggplot2)
+library(plotly)
+library(psych)
+library(lubridate)
+library(gridExtra)
+```
+
+```{r packages, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
+assam_oc <- read.csv("assam_aoc.csv", header = T, stringsAsFactors = F)
+
+assam_merge <- left_join(assam_published,assam_oc, by = "tender_id")
+assam_merge <- assam_merge[ -c(35:57) ]
+write.csv(assam_merge, "assam_merge.csv")
+```
+
+## Once the data is read and cleaned. Let us first have a look at the organizations that spend consistently on public procurement. The public works department has been the major spender across years in Assam followed by the National Health (PWD) department. While in absolute numbers of tenders the Bodoland Council has a lot of tenders across years, the tenders do not amount to as much as the PWDs.
+
+```{r organizations, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
+assam_org<- assam_published %>% group_by(Org) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) 
+assam_org_number<- assam_published %>% group_by(Org) %>% tally()
+assam_org <- merge(assam_org, assam_org_number, by="Org")
+assam_org_print <- assam_org %>% 
+arrange(desc(total)) %>% print()
+```
+## We then observe assam public procurement across organizations, across years. From 2017 onward, the number of public procurement published has been increasing, especially from departments such as bodoland territorial council and Public Works National Health Department.  
+
+```{r year, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
+assam_year <- assam_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) 
+assam_year2<- assam_published %>% group_by(Org,publishedyear) %>% tally()
+assam_year <- merge(assam_year, assam_year2, by = c("Org","publishedyear"))
+
+assam_year <- assam_year %>% arrange(desc(total)) %>%
+group_by(publishedyear) %>% top_n(10)
+
+ggplotly(ggplot(data = assam_year, aes(x = reorder(Org, -n), y=n)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+```
+
+##  While health related tenders are about 13% of the total tenders, they constitute a large percentage (30%) of the total public procurement
+
+```{r year, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
+
+assam_org <- assam_org %>% 
+arrange(desc(n))
+assam_org$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_org$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
+assam_org <- assam_org %>% 
+arrange(desc(total))
+
+assam_org_number <- assam_published %>% group_by(publishedyear,Org) %>% tally()
+
+assam_org_number$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_org_number$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
+
+
+ggplotly(ggplot(data = assam_org, aes(x = publishedyear, y=total, fill = Orgtype)) + geom_bar(position = "stack", stat = "identity") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+ggplotly(ggplot(data = assam_org_number, aes(x = publishedyear, y=n, fill = Orgtype)) + geom_bar(position = "stack", stat = "identity") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+```
+
+## Next let us see which organizations took the longest time between publishing a tender and opening the bid, which is a sign of efficiency. The bodoland council managed to complete this process within 60 days largely. The number of tenders completed within 60 days increased with time. In general there were more health related tenders that took longer than 60 days for tendering compared to the average*
+
+```{r health, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+assam_published$day_category <- cut(assam_published$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
+                                          breaks = c(0, 15, 40, Inf))
+
+assam_oc$aocday_category <- cut(assam_oc$aocdate, 
+                                          breaks = c(0, 60, 100, Inf))
+
+assam_time_aoc <- assam_oc %>% group_by(publishedyear, aocday_category) %>% tally()
+
+assam_time_2 <- assam_oc %>% group_by(Org, aocday_category, publishedyear)%>% tally() 
+assam_time_2$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_time_2$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
+
+ggplotly(assam_time_2 %>% ggplot(aes(x= publishedyear, y = n, fill = aocday_category)) +  
+  geom_bar(stat = "identity") + facet_grid(~Orgtype, scales = "free")+theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+
+```
+
+## *We then see the numbers of tenders under different tendering stages across organizations and through the years. While 2018 was a particularly bad year for the public works department with a minor percentage of tenders actually getting to the award of contract stage. This number has improved drastically. The number of tenders that havent yet been opened have also seen an improvement over the years*
+```{r tenderstage, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+
+assam_published$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_published$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
+
+assam_stage <- assam_published %>% filter (Orgtype == "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM")%>%  group_by( Org,tender_stage, publishedyear) %>%  tally ()
+
+assam_stage <- assam_stage %>% 
+arrange(desc(n)) %>% 
+group_by(publishedyear, tender_stage) %>% slice(1:5)
+
+ggplotly(ggplot(data = assam_stage, aes(x = Org, y=n, fill = tender_stage)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+```
+
+## *Next let us see the tender status for the different organizations*
+
+```{r tenderstatus, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+assam_published$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_published$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
+
+assam_published$stage_status_updated_on<- as.Date(assam_published$stage_status_updated_on, 
+                                                        format="%d-%b-%Y")
+assam_published$status_year <- year(assam_published$stage_status_updated_on)
+
+assam_stage_1 <-  assam_published %>% group_by(Org,tender_status,publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
+
+assam_stage_1 <- assam_stage_1 %>% arrange(desc(total)) %>% group_by(publishedyear) %>% top_n(10)
+
+ggplotly(ggplot(data = assam_stage_1, aes(x = tender_status, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+ggplotly(ggplot(data = assam_stage_1, aes(x = Org, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+assam_health1 <- assam_published %>% filter (Org == "NATIONAL HEALTH MISSION")%>%  group_by( Org,tender_stage,tender_status, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
+
+ggplotly(ggplot(data = assam_health1, aes(x = publishedyear, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~tender_status, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+
+assam_health2 <- assam_published %>% filter (Org == "HEALTH AND FAMILY WELFARE DEPARTMENT")%>%  group_by( Org,tender_stage,tender_status, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
+
+ggplotly(ggplot(data = assam_health2, aes(x = publishedyear, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~tender_status, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+
+assam_health3 <- assam_published %>% filter (Org == "PUBLIC WORKS BUILDING AND NH DEPARTMENT")%>%  group_by( Org,tender_stage,tender_status, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
+
+ggplotly(ggplot(data = assam_health3, aes(x = publishedyear, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~tender_status, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+
+
+```
