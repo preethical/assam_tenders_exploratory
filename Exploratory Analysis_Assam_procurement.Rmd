@@ -21,9 +21,10 @@ library(plotly)
 library(psych)
 library(lubridate)
 library(gridExtra)
+library(networkD3)
 ```
 
-```{r packages, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+```{r read, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
 assam_published <- read.csv("assam_tenders_published.csv", header = T, stringsAsFactors = F)
 assam_oc <- read.csv("assam_aoc.csv", header = T, stringsAsFactors = F)
 
@@ -32,50 +33,119 @@ assam_merge <- assam_merge[ -c(35:57) ]
 write.csv(assam_merge, "assam_merge.csv")
 ```
 
-## Once the data is read and cleaned. Let us first have a look at the organizations that spend consistently on public procurement. The public works department has been the major spender across years in Assam followed by the National Health (PWD) department. While in absolute numbers of tenders the Bodoland Council has a lot of tenders across years, the tenders do not amount to as much as the PWDs.
+## Introduction
+
+- Once the data is read and cleaned. Let us first have a look at the organizations that spend consistently on public procurement. The public works department has been the major spender across years in Assam followed by the National Health (PWD) department - the department that is involved in building infrastructure for health. While in absolute numbers the Bodoland territorial Council has a lot of tenders across years, the tenders do not amount to as much as the PWDs. The Industries and Commerce department has the most expensive tenders on average. 
 
 ```{r organizations, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
 assam_org<- assam_published %>% group_by(Org) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) 
 assam_org_number<- assam_published %>% group_by(Org) %>% tally()
 assam_org <- merge(assam_org, assam_org_number, by="Org")
 assam_org_print <- assam_org %>% 
-arrange(desc(total)) %>% print()
+arrange(desc(total)) %>% top_n(20) 
+
+write.csv(assam_org_print,"assam_org.csv")
 ```
-## We then observe assam public procurement across organizations, across years. From 2017 onward, the number of public procurement published has been increasing, especially from departments such as bodoland territorial council and Public Works National Health Department.  
+## Across Organizations
+
+- We then observe assam public procurement across organizations, across years. From 2017 onward, the number of public procurement published across departments has been increasing. The departments that have shown considerable improvement in publishing procurement data are bodoland territorial council, PWD - NH department, National Health Mission etc.
 
 ```{r year, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
-assam_year <- assam_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE)) 
-assam_year2<- assam_published %>% group_by(Org,publishedyear) %>% tally()
-assam_year <- merge(assam_year, assam_year2, by = c("Org","publishedyear"))
+assam_year <- assam_merge %>% group_by(Org.x, publishedyear.x) %>% summarise(total = sum(awarded_price_in_rs, na.rm = TRUE)) 
+
+assam_year2<- assam_merge %>% group_by(Org.x, publishedyear.x) %>% tally()
+assam_year <- merge(assam_year, assam_year2, by = c("Org.x", "publishedyear.x"))
 
 assam_year <- assam_year %>% arrange(desc(total)) %>%
-group_by(publishedyear) %>% top_n(10)
+group_by(publishedyear.x) %>% top_n(10)
 
-ggplotly(ggplot(data = assam_year, aes(x = reorder(Org, -n), y=n)) + geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
-```
+ggplotly(ggplot(data = assam_year, aes(x = reorder(Org.x, -n), y=n)) + geom_bar(stat = "identity") + facet_grid(~publishedyear.x, scales = "free") + theme(axis.text.x = element_text (angle=90,hjust=1,vjust=.5,colour='black'))+ scale_x_discrete(name = "") + scale_y_continuous(name="Number of tenders published", limits=c(0, 5000)))
 
-##  While health related tenders are about 13% of the total tenders, they constitute a large percentage (30%) of the total public procurement
-
-```{r year, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
-
-assam_org <- assam_org %>% 
-arrange(desc(n))
-assam_org$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_org$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
-assam_org <- assam_org %>% 
-arrange(desc(total))
-
-assam_org_number <- assam_published %>% group_by(publishedyear,Org) %>% tally()
-
-assam_org_number$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_org_number$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
-
-
-ggplotly(ggplot(data = assam_org, aes(x = publishedyear, y=total, fill = Orgtype)) + geom_bar(position = "stack", stat = "identity") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
-
-ggplotly(ggplot(data = assam_org_number, aes(x = publishedyear, y=n, fill = Orgtype)) + geom_bar(position = "stack", stat = "identity") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+ggplotly(ggplot(data = assam_year, aes(x = reorder(Org.x, -n), y=total)) + geom_bar(stat = "identity") + facet_grid(~publishedyear.x, scales = "free") + theme(axis.text.x = element_text (angle=90,hjust=1,vjust=.5,colour='black'))+ scale_x_discrete(name = ""))
 
 ```
 
-## Next let us see which organizations took the longest time between publishing a tender and opening the bid, which is a sign of efficiency. The bodoland council managed to complete this process within 60 days largely. The number of tenders completed within 60 days increased with time. In general there were more health related tenders that took longer than 60 days for tendering compared to the average*
+##  Looking at health related tenders
+
+- Three main organizations are spending toward it - The National Health Mission, HFW, PWD-NH department). Other departments like Sarba Siksha Abhyan and Social Welfare departmnet have also had health procurement
+
+- While health related tenders are about 13% of the total tenders, they constitute a large percentage (30%) of the total public procurement
+
+```{r year1, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=12}
+require(scales)
+assam_merge$price_bid_opening_date.x <- as.Date(assam_merge$price_bid_opening_date.x)
+                                                
+assam_merge$bid_opening_date.x <- as.Date(assam_merge$bid_opening_date.x)
+assam_merge$bidopen_pricebid <-as.Date(assam_merge$price_bid_opening_date.x) - as.Date(assam_merge$bid_opening_date.x)
+
+
+assam_merge$daycat <- cut(as.numeric(assam_merge$bidopen_pricebid), breaks = c(0, 30, 60, Inf))
+assam_nhm <- assam_merge %>% filter(Org.x == "NATIONAL HEALTH MISSION")
+
+assam_nhm_daycat <- assam_nhm %>% group_by(publishedyear.x, daycat) %>% tally()
+
+assam_nhmdaycat <- assam_nhm_daycat %>% na.omit()
+
+ggplotly(assam_nhmdaycat %>% ggplot(aes(x= factor(publishedyear.x), y = n, fill = daycat)) + 
+  geom_bar(stat = "identity") + theme(axis.text.x = element_text(size = 6, angle = 90))  + xlab("Published Year") + scale_y_continuous(name = "Number of tenders published"))
+
+assam_merge_daycat <- assam_merge %>% group_by(publishedyear.x, daycat) %>% tally()
+assam_merge_daycat <- assam_merge_daycat %>% na.omit()
+
+assam_nhm$day_category <- cut(assam_nhm$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
+                                          breaks = c(0, 15, 40, Inf))
+
+assam_nhm$aocday_category <- cut(assam_nhm$aocdate, 
+                                          breaks = c(0, 60,100, Inf))
+
+assam_nhm_aoc <- assam_nhm %>% group_by(publishedyear.x, aocday_category) %>% tally()
+assam_nhm_day <- assam_nhm %>% group_by(publishedyear.x, day_category) %>% tally()
+
+assam_nhm_day_try <- assam_nhm_day %>% na.omit()
+assam_nhm_aoc_try <- assam_nhm_aoc %>% na.omit()
+
+ggplotly(assam_nhm_day_try %>% ggplot(aes(x= factor(publishedyear.x), y = n, fill = day_category)) + 
+  geom_bar(stat = "identity") + theme(axis.text.x = element_text(size = 6, angle = 90))  + xlab("Published Year") + scale_y_continuous(name = "Number of tenders published"))
+
+ggplotly(assam_nhm_aoc_try %>% ggplot(aes(x= factor(publishedyear.x), y = n, fill = aocday_category)) + 
+  geom_bar(stat = "identity") + theme(axis.text.x = element_text(size = 6, angle = 90))  + xlab("Published Year") + scale_y_continuous(name = "Number of tenders published"))
+
+
+assam_merge$day_category <- cut(assam_merge$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
+                                          breaks = c(0, 15, 40, Inf))
+
+assam_merge$aocday_category <- cut(assam_merge$aocdate, 
+                                          breaks = c(0, 60,100, Inf))
+
+assam_merge_aoc <- assam_merge %>% group_by(publishedyear.x, aocday_category) %>% tally()
+assam_merge_day <- assam_merge %>% group_by(publishedyear.x, day_category) %>% tally()
+
+assam_merge_day_try <- assam_merge_day %>% na.omit()
+assam_merge_aoc_try <- assam_merge_aoc %>% na.omit() 
+
+
+ggplotly(assam_merge_day_try %>% ggplot(aes(x= factor(publishedyear.x), y = n, fill = day_category)) + 
+  geom_bar(stat = "identity") + theme(axis.text.x = element_text(size = 6, angle = 90))  + xlab("Published Year") + scale_y_continuous(name = "Number of tenders published"))
+
+ggplotly(assam_merge_aoc_try %>% ggplot(aes(x= factor(publishedyear.x), y = n, fill = aocday_category)) + 
+  geom_bar(stat = "identity") + theme(axis.text.x = element_text(size = 6, angle = 90))  + xlab("Published Year") + scale_y_continuous(name = "Number of tenders published"))
+```
+
+#assam_year$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_year$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM)", "Other Departments")
+
+#assam_org <- assam_org %>% 
+
+#arrange(desc(total))
+
+#assam_year2$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_year2$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
+
+
+#ggplotly(ggplot(data = assam_year, aes(x = publishedyear.x, y=total, fill = day)) + geom_bar(position = "stack", stat = "identity") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+#ggplotly(ggplot(data = assam_year2, aes(x = publishedyear, y=n, fill = Orgtype)) + geom_bar(position = "stack", stat = "identity") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+
+
+## Next let us see which organizations took the longest time between publishing a tender and opening the bid, which is a sign of efficiency. The bodoland council managed to complete this process within 60 days largely. The number of tenders completed within 60 days increased with time. In general there were more health related tenders that took longer than 60 days for tendering compared to the average
 
 ```{r health, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
 assam_published$day_category <- cut(assam_published$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
@@ -95,7 +165,8 @@ ggplotly(assam_time_2 %>% ggplot(aes(x= publishedyear, y = n, fill = aocday_cate
 
 ```
 
-## *We then see the numbers of tenders under different tendering stages across organizations and through the years. While 2018 was a particularly bad year for the public works department with a minor percentage of tenders actually getting to the award of contract stage. This number has improved drastically. The number of tenders that havent yet been opened have also seen an improvement over the years*
+## We then see the numbers of tenders under different tendering stages across organizations and through the years. While 2018 was a particularly bad year for the public works department with a minor percentage of tenders actually getting to the award of contract stage. This number has improved drastically. The number of tenders that havent yet been opened have also seen an improvement over the years
+
 ```{r tenderstage, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
 
 assam_published$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_published$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
@@ -110,13 +181,12 @@ ggplotly(ggplot(data = assam_stage, aes(x = Org, y=n, fill = tender_stage)) + ge
 
 ```
 
-## *Next let us see the tender status for the different organizations*
+## Next let us see the tender status for the different organizations
 
 ```{r tenderstatus, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
 assam_published$Orgtype <- ifelse(grepl("NH DEPARTMENT|HEALTH", assam_published$Org), "Departments - Health Related Procurement (NH Dept- PWD, HFW, NHM", "Other Departments")
 
-assam_published$stage_status_updated_on<- as.Date(assam_published$stage_status_updated_on, 
-                                                        format="%d-%b-%Y")
+assam_published$stage_status_updated_on<- as.Date(assam_published$stage_status_updated_on, format="%d-%b-%Y")
 assam_published$status_year <- year(assam_published$stage_status_updated_on)
 
 assam_stage_1 <-  assam_published %>% group_by(Org,tender_status,publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
@@ -137,10 +207,288 @@ assam_health2 <- assam_published %>% filter (Org == "HEALTH AND FAMILY WELFARE D
 ggplotly(ggplot(data = assam_health2, aes(x = publishedyear, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~tender_status, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 
 
-assam_health3 <- assam_published %>% filter (Org == "PUBLIC WORKS BUILDING AND NH DEPARTMENT")%>%  group_by( Org,tender_stage,tender_status, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
+assam_health3 <- assam_published %>% filter (Org == "PUBLIC WORKS BUILDING AND NH DEPARTMENT")%>%  group_by( Org,tender_stage,tender_status,publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
 
 ggplotly(ggplot(data = assam_health3, aes(x = publishedyear, y=total, fill = tender_status)) + geom_bar(stat="identity") + facet_grid(~tender_status, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
+```
+extra code
+```{r sankey, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+results <- assam_merge %>% group_by(publishedyear.x,tender_status, tender_stage.x) %>% tally()
+tender_age <- unique(as.character(results$publishedyear.x))
+tender_status <- unique(as.character(results$tender_status))
+tender_stage <- unique(as.character(results$tender_stage.x))
+nodes <- data.frame(node = c(0:17), name = c(tender_age,tender_status,tender_stage))
+
+results <- merge(results, nodes, by.x = "tender_status", by.y = "name")
+results <- merge(results, nodes, by.x = "tender_stage.x", by.y = "name")
+results <- merge(results, nodes, by.x = "publishedyear.x", by.y = "name")
+links <- results[ , c("node","node.x", "node.y", "n")]
+colnames(links) <- c("source", "target", "target","value")
+
+sankeyNetwork(Links = links, Nodes = nodes, 
+                         Source = 'source', 
+                         Target = 'target', 
+                         Value = 'value', 
+                         NodeID = 'name',
+                         units = 'n')
+
+results <- assam_nhm %>% group_by(tender_status, tender_stage.x) %>% tally()
+tender_status <- unique(as.character(results$tender_status))
+tender_stage <- unique(as.character(results$tender_stage.x))
+nodes <- data.frame(node = c(0:11), name = c(tender_status,tender_stage))
+
+results <- merge(results, nodes, by.x = "tender_status", by.y = "name")
+results <- merge(results, nodes, by.x = "tender_stage.x", by.y = "name")
+links <- results[ , c("node.x", "node.y", "n")]
+colnames(links) <- c("source", "target", "value")
+
+sankeyNetwork(Links = links, Nodes = nodes, 
+                         Source = 'source', 
+                         Target = 'target', 
+                         Value = 'value', 
+                         NodeID = 'name',
+                         units = 'n')
+
+```
+
+```{r open, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+open <- assam_merge %>% filter(tender_type.x == "Open Tender")
+open_single <- open %>% group_by(no_of_bids_received.x,publishedyear.x) %>% tally()
+
+open_nhm_type <- assam_nhm %>%group_by(no_of_bids_received.x) %>% tally()
+ggplotly(open_nhm_type %>% ggplot(aes(x=no_of_bids_received.x, y = n))+geom_bar(stat = "identity")+ theme(axis.text.x = element_text(size = 6, angle = 90)) + scale_x_continuous(name="Number of bids", limits=c(0, 50))+ ylab("Number of tenders"))
+
+open_type <- assam_merge %>%group_by(no_of_bids_received.x) %>% tally()
+ggplotly(open_type %>% ggplot(aes(x=no_of_bids_received.x, y = n))+geom_bar(stat = "identity")+ theme(axis.text.x = element_text(size = 6, angle = 90)) + scale_x_continuous(name="Number of bids", limits=c(0, 50))+ ylab("Number of tenders"))
+
+open_nhm <- assam_nhm %>%group_by(no_of_bids_received.x,publishedyear.x) %>% tally()
+open_nhm[] <- cbind(apply(open_nhm[,1], 1, function(x) ifelse(x >10, ">10",x)), open_nhm[,2:3])
+open_single[]<- cbind(apply(open_single[,1], 1, function(x) ifelse(x >10, ">10",x)), open_single[,2:3])
+
+ggplotly(open_nhm %>% ggplot(aes(x= factor(publishedyear.x), y = n, fill = no_of_bids_received.x)) +  
+  geom_bar(stat = "identity")+theme(axis.text.x = element_text(size = 6, angle = 90))+xlab("Published Year") + ylab("Number of tenders"))
+
+ggplotly(open_single %>% ggplot(aes(x= factor(publishedyear.x), y = n,fill= no_of_bids_received.x)) +  
+  geom_bar(stat = "identity") + theme(axis.text.x = element_text(size = 6, angle = 90))+ xlab("Published year")+ ylab("Number of tenders"))
+
+open_nhm$no_of_bids_received.x <- factor(open_nhm$no_of_bids_received.x)
+open_nhm$Share <- open_nhm$n / sum(open_nhm$n)
+open_nhm$ymax <- cumsum(open_nhm$Share)
+open_nhm$ymin <- c(0, head(open_nhm$ymax, n= -1))
+
+ggplot(open_nhm, aes(fill = no_of_bids_received.x, ymax = ymax, ymin = ymin, xmax = 2, xmin = 1)) + geom_rect() + 
+  coord_polar(theta = "y",start=-pi/2) + xlim(c(0, 2)) + ylim(c(0,2))
+
+open_single$no_of_bids_received.x <- factor(open_single$no_of_bids_received.x)
+open_single$Share <- open_single$n / sum(open_single$n)
+open_single$ymax <- cumsum(open_single$Share)
+open_single$ymin <- c(0, head(open_single$ymax, n= -1))
 
 
+ggplot(open_single, aes(fill = no_of_bids_received.x, ymax = ymax, ymin = ymin, xmax = 2, xmin = 1)) + geom_rect() + 
+  coord_polar(theta = "y",start=-pi/2) + xlim(c(0, 2)) + ylim(c(0,2))
+
+```
+
+```{r product type, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+##summarise(total = sum(awarded_price_in_rs))
+assam_nhm$producttype <- ifelse(grepl("Civil|Architecture|Construction", assam_nhm$product_category.x), "Civil Works", "Other")
+assam_civil <- assam_nhm %>% filter(producttype == "Civil Works") %>% group_by(no_of_bids_received.x) %>% tally()
+
+assam_civil$no_of_bids_received.x <- factor(assam_civil$no_of_bids_received.x)
+assam_civil$Share <- assam_civil$n / sum(assam_civil$n)
+assam_civil$ymax <- cumsum(assam_civil$Share)
+assam_civil$ymin <- c(0, head(assam_civil$ymax, n= -1))
+
+ggplot(assam_civil, aes(fill = no_of_bids_received.x, ymax = ymax, ymin = ymin, xmax = 2, xmin = 1)) + geom_rect() + 
+  coord_polar(theta = "y",start=-pi/2) + xlim(c(0, 2)) + ylim(c(0,2))
+
+assam_nhm$producttype <- ifelse(grepl("Medical|Medicines|Goods|Laboratory|Paddy|Consumables|Machinery|Machineries",  assam_nhm$product_category.x), "Medical Equipment & Drugs", "Other")
+
+assam_drugs <- assam_nhm %>% filter(producttype == "Medical Equipment & Drugs") %>% group_by(no_of_bids_received.x) %>% tally()
+
+assam_drugs[] <- cbind(apply(assam_drugs[,1], 1, function(x) ifelse(x >15, ">15",x)), assam_drugs[,2])
+
+assam_drugs$no_of_bids_received.x <- factor(assam_drugs$no_of_bids_received.x)
+assam_drugs$Share <- assam_drugs$n / sum(assam_drugs$n)
+assam_drugs$ymax <- cumsum(assam_drugs$Share)
+assam_drugs$ymin <- c(0, head(assam_drugs$ymax, n= -1))
+
+ggplot(assam_drugs, aes(fill = no_of_bids_received.x, ymax = ymax, ymin = ymin, xmax = 2, xmin = 1)) + geom_rect() + 
+  coord_polar(theta = "y",start=-pi/2) + xlim(c(0, 2)) + ylim(c(0,2))
+
+assam_types <- assam_nhm %>% group_by(no_of_bids_received.x, tender_category.x) %>% tally()
+assam_types[] <- cbind(apply(assam_types[,1], 1, function(x) ifelse(x >10, ">10",x)), assam_types[,2:3])
+
+ggplotly(assam_types %>% ggplot(aes(x= tender_category.x, y = n, fill = no_of_bids_received.x)) +  
+  geom_bar(stat = "identity") +theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+```
+
+
+```{r single bid type, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+assam_types <- assam_nhm %>% group_by(no_of_bids_received.x, tender_category.x, publishedyear.x) %>% tally()
+assam_types[] <- cbind(apply(assam_types[,1], 1, function(x) ifelse(x >10, ">10",x)), assam_types[,2:4])
+
+ggplotly(assam_nhm %>% filter (tender_category.x == "Works") %>% ggplot(aes(x= publishedyear.x, y = no_of_bids_received.x)) + geom_boxplot() + theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+ggplotly(assam_nhm %>% filter (tender_category.x == "Services") %>% ggplot(aes(x= publishedyear.x, y = no_of_bids_received.x)) + geom_boxplot() + theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+ggplotly(assam_nhm %>% filter (tender_category.x == "Goods") %>% ggplot(aes(x= publishedyear.x, y = no_of_bids_received.x)) + geom_boxplot() + theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+
+assam_nhm_works <- assam_nhm %>% filter(tender_category.x == "Works") %>% group_by(no_of_bids_received.x, publishedyear.x) %>% tally()
+
+assam_nhm_works$no_of_bids_received.x <- factor(assam_nhm_works$no_of_bids_received.x)
+assam_nhm_works$Share <- assam_nhm_works$n / sum(assam_nhm_works$n)
+assam_nhm_works$ymax <- cumsum(assam_nhm_works$Share)
+assam_nhm_works$ymin <- c(0, head(assam_nhm_works$ymax, n= -1))
+
+write.csv(assam_nhm_works, "assam_nhm_works.csv")
+
+
+assam_nhm_goods <- assam_nhm %>% filter(tender_category.x == "Goods") %>% group_by(no_of_bids_received.x, publishedyear.x) %>% tally()
+
+assam_nhm_goods$no_of_bids_received.x <- factor(assam_nhm_goods$no_of_bids_received.x)
+assam_nhm_goods$Share <- assam_nhm_goods$n / sum(assam_nhm_goods$n)
+assam_nhm_goods$ymax <- cumsum(assam_nhm_goods$Share)
+assam_nhm_goods$ymin <- c(0, head(assam_nhm_goods$ymax, n= -1))
+
+write.csv(assam_nhm_goods, "assam_nhm_goods.csv")
+
+assam_nhm_services <- assam_nhm %>% filter(tender_category.x == "Services") %>% group_by(no_of_bids_received.x, publishedyear.x) %>% tally()
+
+assam_nhm_services$no_of_bids_received.x <- factor(assam_nhm_services$no_of_bids_received.x)
+assam_nhm_services$Share <- assam_nhm_services$n / sum(assam_nhm_services$n)
+assam_nhm_services$ymax <- cumsum(assam_nhm_services$Share)
+assam_nhm_services$ymin <- c(0, head(assam_nhm_services$ymax, n= -1))
+
+write.csv(assam_nhm_services, "assam_nhm_services.csv")
+
+
+assam_nhm_bivar <- assam_nhm %>% group_by(name_of_awarded_bidders) %>% tally()
+assam_nhm_bivar2 <- assam_nhm %>% group_by(name_of_awarded_bidders) %>% summarise(total = sum(awarded_price_in_rs))
+
+assam_nhm_bivar <- merge(assam_nhm_bivar, assam_nhm_bivar2, by = "name_of_awarded_bidders")
+
+write.csv(assam_nhm_bivar, "assam_nhm_bivar.csv")
+```
+
+```{r bivar, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+assam_nhm_bivar1 <- read.csv("assam_nhm_bivar1.csv", header = T, stringsAsFactors = F)
+assam_nhm_bivar_20 <-assam_nhm_bivar1 %>% arrange(desc(n)) %>% top_n(20) 
+ggplotly(ggplot(assam_nhm_bivar_20, aes(x= n, y = total)) + geom_point(size=2, shape=23) +geom_smooth(method=lm, se=FALSE, fullrange=TRUE))
+
+
+ggplotly(ggplot(assam_org_bivar, aes(x= unique_types,y = n,size = total)) + geom_point(alpha=0.3) + scale_size(range = c(.1, 25), name="Total Awarded value")+theme(legend.position="bottom") + ylab("Number of tenders") + xlab("Number of Unique Suppliers") + theme(legend.position = "none"))
+```
+
+```{r boxplot, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+assam_merge$submissiondays<- as.Date(assam_merge$bid_opening_date.x) - as.Date(assam_merge$published_date.x)
+
+ggplotly(assam_merge %>% ggplot(aes(x= publishedyear.x, y = submissiondays)) + geom_boxplot(fill="skyblue", notch=FALSE) + facet_wrap(~ tender_category.x) + theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of days for submission") + theme(plot.margin = unit(c(1,1,1,1), "cm")) + coord_cartesian(clip = "off"))
+
+assam_nhm$submissiondays<- as.Date(assam_nhm$bid_opening_date.x) - as.Date(assam_nhm$published_date.x)
+
+assam_nhm %>% ggplot(aes(x= as.character(publishedyear.x), y = submissiondays)) + geom_boxplot(fill="skyblue") + facet_wrap(~ tender_category.x) + theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of days for submission") + theme(plot.margin = unit(c(1,1,1,1), "cm"))
+
+assam_merge %>% filter (Org.x == "DEPARTMENT OF WATER RESOURCES") %>% ggplot(aes(x= as.character(publishedyear.x), y = submissiondays)) + geom_boxplot(fill="skyblue") + facet_wrap(~ tender_category.x) + theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of days for submission") + theme(plot.margin = unit(c(1,1,1,1), "cm"))
+
+```
+
+``` {r corr, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+assam_merge$no_of_bids_received.x[assam_merge$no_of_bids_received.x > 25] <- 25 
+
+ggplotly (assam_merge %>% ggplot(aes (x = no_of_bids_received.x, y = bidopen_pricebid)) + geom_point (size=2, shape=23) + geom_smooth(method=lm, se=FALSE, fullrange=TRUE))
+
+
+```
+
+``` {r cancelledsingle, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+assam_single_cancelled <- assam_merge %>% group_by (publishedyear.x, no_of_bids_received.x, tender_status) %>% tally()
+
+assam_merge <- assam_merge %>% mutate(Status = if_else(price_bid_opening_date.x > 0, "yes","no"))
+assam_merge$Status[is.na(assam_merge$Status)] <- "NO"
+
+assam_single_cancelled_1 <- assam_merge %>% group_by (publishedyear.x, no_of_bids_received.x, Status) %>% tally()
+
+ggplotly (assam_merge %>% ggplot(aes (x = no_of_bids_received.x, y = bidopen_pricebid)) + geom_point (size=2, shape=23) + geom_smooth(method=lm, se=FALSE, fullrange=TRUE))
+
+write.csv(assam_single_cancelled_1, "assam_singled_1.csv")
+
+assam_single_cancelled_NHM <- assam_merge %>% filter(Org.x == "NATIONAL HEALTH MISSION") %>% group_by (publishedyear.x, no_of_bids_received.x, Status) %>% tally()
+
+assam_single_cancelled_dowr <- assam_merge %>% filter(Org.x == "DEPARTMENT OF WATER RESOURCES") %>% group_by (publishedyear.x, no_of_bids_received.x, Status) %>% tally()
+
+write.csv(assam_single_cancelled_NHM, "assam_NHM_single.csv")
+
+```
+
+``` {r modifiedbubble, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+assam_org_bivar <- assam_org_bivar %>% filter (Org != "PUBLIC WORKS ROADS DEPARTMENT")
+
+ggplotly(ggplot(assam_org_bivar, aes(x= unique_types,y = n,size = total)) + geom_point(alpha=0.3) + scale_size(range = c(.1, 25), name="Total Awarded value")+theme(legend.position="bottom") + ylab("Number of tenders") + xlab("Number of Unique Suppliers") + theme(legend.position = "none"))
+```
+
+``` {r aoc, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+assam_merge$aocproc <- as.Date(assam_merge$date_of_award_of_contract) - as.Date(assam_merge$price_bid_opening_date.x)
+
+ggplotly(assam_merge %>% ggplot(aes(x= publishedyear.x, y = aocproc)) + geom_boxplot() + theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+assam_nhm$aocproc <- as.Date(assam_nhm$date_of_award_of_contract) - as.Date(assam_nhm$price_bid_opening_date.x)
+
+ggplotly(assam_nhm %>% ggplot(aes(x= publishedyear.x, y = aocproc)) + geom_boxplot() + theme(axis.text.x = element_text(size = 6, angle = 90)))
+```
+
+``` {r aoc1, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+assam_merge <- assam_merge %>% mutate(Status = if_else(Org.x == "PUBLIC WORKS ROADS DEPARTMENT", "PWD","Other"))
+
+assam_year_pwd <- assam_merge %>% group_by(Status, publishedyear.x) %>% tally()
+
+ggplotly(ggplot(data = assam_year_pwd, aes(x = Status, y=n)) + geom_bar(stat = "identity") + facet_grid(~publishedyear.x, scales = "free") + theme(axis.text.x = element_text (angle=90,hjust=1,vjust=.5,colour='black'))+ scale_x_discrete(name = ""))
+
+assam_year_tendertype <- assam_merge %>% group_by(tender_type.x, publishedyear.x) %>% tally()
+
+ggplotly(ggplot(data = assam_year_tendertype, aes(x = tender_type.x, y=n)) + geom_bar(stat = "identity") + facet_grid(~publishedyear.x, scales = "free") + theme(axis.text.x = element_text (angle=90,hjust=1,vjust=.5,colour='black'))+ scale_x_discrete(name = ""))
+
+
+assam_year_category <- assam_merge %>% group_by(tender_category.x, publishedyear.x) %>% tally()
+
+ggplotly(ggplot(data = assam_year_category, aes(x = tender_category.x, y=n)) + geom_bar(stat = "identity") + facet_grid(~publishedyear.x, scales = "free") + theme(axis.text.x = element_text (angle=90,hjust=1,vjust=.5,colour='black'))+ scale_x_discrete(name = ""))
+
+
+ggplotly(assam_merge %>% ggplot(aes(x= publishedyear.x, y = bidopen_pricebid)) + geom_boxplot(fill="skyblue", notch=FALSE) + facet_wrap (~tender_category.x) +  theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of days for submission") + theme(plot.margin = unit(c(1,1,1,1), "cm")) + coord_cartesian(clip = "off"))
+
+assam_merge$bidopen_pricebid <-as.Date(assam_merge$price_bid_opening_date.x) - as.Date(assam_merge$bid_opening_date.x)
+
+outliers<- boxplot(assam_merge$bidopen_pricebid , plot=FALSE)$out
+x<-assam_merge
+x<- x[-which(x$bidopen_pricebid %in% outliers),]
+
+ggplotly(x %>% ggplot(aes(x= publishedyear.x, y = bidopen_pricebid)) + geom_boxplot(fill="skyblue", notch=FALSE) + facet_wrap (~tender_category.x) +  theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of days for evaluation") + theme(plot.margin = unit(c(1,1,1,1), "cm")) + coord_cartesian(clip = "off"))
+```
+
+``` {r aoc2, message=FALSE, warning=FALSE, echo = FALSE, fig.width=20, fig.height=10}
+
+outliers<- boxplot(assam_merge$no_of_bids_received.x, plot=FALSE)$out
+x<-assam_merge
+x<- x[-which(x$no_of_bids_received.x %in% outliers),]
+
+ggplotly(x %>% ggplot(aes(x= publishedyear.x, y = no_of_bids_received.x)) + geom_boxplot(fill="skyblue", notch=FALSE) + theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of bids received") + theme(plot.margin = unit(c(1,1,1,1), "cm")) + coord_cartesian(clip = "off"))
+
+
+assam_merge$submissiondays<- as.Date(assam_merge$bid_opening_date.x) - as.Date(assam_merge$published_date.x)
+
+outliers<- boxplot(assam_merge$submissiondays, plot=FALSE)$out
+x<-assam_merge
+x<- x[-which(x$submissiondays %in% outliers),]
+
+ggplotly(x %>% ggplot(aes(x= publishedyear.x, y = submissiondays)) + geom_boxplot(fill="skyblue", notch=FALSE) + facet_wrap(~ tender_category.x) + theme(axis.text.x = element_text(size = 6, angle = 90)) + xlab("Published Year") +ylab("Number of days for submission") + theme(plot.margin = unit(c(1,1,1,1), "cm")) + coord_cartesian(clip = "off"))
 
 ```

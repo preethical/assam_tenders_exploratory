@@ -33,8 +33,12 @@ write.csv(assam_merge, "assam_merge.csv")
 - First let us the organizations that consistently spend on tenders in Assam each year. The public works department has been the major spender across years in Assam followed by the National Health (PWD) department - mainly because of 2020-21 which some of the most expensive tenders but not as many of them. While in absolute numbers of tenders the Bodoland Council has a lot of tenders across years, the tenders do not amount to as much as the PWDs. 
 
 ```{r initiallook, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+assam_tenders_total <- assam_published %>% group_by(publishedyear) %>% tally()
+assam_tend_cat <- assam_published %>% group_by(publishedyear, tender_category) %>% tally()
+
 assam_org<- assam_published %>% group_by(Org, publishedyear) %>% summarise(total = sum(value_of_tender_in_rs, na.rm = TRUE))
 
+assam_tenders_oc <- assam_oc %>%  group_by(publishedyear > 2018) %>% summarise(Unique_Elements = n_distinct(name_of_awarded_bidders))
 assam_org <- assam_org %>% 
 arrange(desc(total)) %>% 
 group_by(publishedyear) %>% slice (1:10)
@@ -45,10 +49,15 @@ ggplotly(ggplot(data = assam_org, aes(x = reorder(Org, -total), y=total)) + geom
 ##*Next let us see which organizations took the longest time between publishing a tender and opening the bid, which is a sign of efficiency. The bodoland council managed to complete this process within 60 days largely. The number of tenders completed within 60 days increased with time. The national health mission was one which had over 60 days time period between publishing and bid opening.* 
 ```{r initiallook1, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
 assam_published$day_category <- cut(assam_published$cycle_time_bet_e_publishing_date_and_opening_of_price_bid_in_days, 
-                                          breaks = c(0, 30, 60, Inf))
+                                          breaks = c(0, 15, 40, Inf))
+
+assam_oc$aocday_category <- cut(assam_oc$aocdate, 
+                                          breaks = c(0, 60, 0, Inf))
+
+assam_time_aoc <- assam_oc %>% group_by(publishedyear, aocday_category) %>% tally()
 
 assam_time<- assam_published %>% group_by(Org, day_category, publishedyear) %>% tally() 
-
+assam_time <- assam_published %>% group_by(publishedyear, day_category) %>% tally()
 
 assam_time <- assam_time %>% 
   na.omit() %>% 
@@ -56,8 +65,12 @@ assam_time <- assam_time %>%
   group_by(publishedyear,day_category) %>% slice (1:5)
   
 
-ggplotly(assam_time %>% ggplot(aes(x= reorder (Org,-n), y = n, fill = day_category)) + 
+ggplotly(assam_time %>% ggplot(aes(x= publishedyear, y = n, fill = day_category)) + 
   geom_bar(stat = "identity") + facet_grid(~publishedyear, scales = "free")+theme(axis.text.x = element_text(size = 6, angle = 90)))
+
+
+
+
 ```
 ##*We then see the numbers of tenders under different tendering stages across organizations and through the years. While 2018 was a particularly bad year for the public works department with a minor percentage of tenders actually getting to the award of contract stage. This number has improved drastically. The number of tenders that havent yet been opened have also seen an improvement over the years*
 ```{r initiallook2, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
@@ -106,13 +119,22 @@ group_by(status_year, tender_status) %>% slice(1:5)
 ggplotly(ggplot(data = assam_status, aes(x = reorder(Org, -n), y=n, fill = tender_status)) + geom_bar(stat = "identity") + facet_grid(~status_year, scales = "free") + theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 ```
 
-```{r initiallook6, message=FALSE, warning=FALSE, echo = FALSE, fig.width=14, fig.height=10}
+
+
+```{r initiallook6, echo=FALSE, fig.height=10, fig.width=14, message=FALSE, warning=FALSE}
+assam_tenders_cancelled <- assam_published %>% group_by(tender_status, publishedyear) %>% tally()
+
+
+
 assam_tenders_aoc <- assam_tenders_aoc %>% separate(organisation_chain, into = c("Org","role"), sep = "\\|\\|", extra = "merge")
-assam_bids <- assam_tenders_aoc %>% group_by(Org,no_of_bids_received) %>% summarise(total = sum(awarded_price_in_rs, na.rm = TRUE))
+assam_bids <- assam_oc %>% group_by(Org,no_of_bids_received) %>% summarise(total = sum(awarded_price_in_rs, na.rm = TRUE))
+
+assam_bid_attempt <- assam_oc %>% group_by(no_of_bids_received == 1, publishedyear > 2018) %>% tally()
+
 
 assam_bids<- assam_bids %>% 
 arrange(desc(n)) %>% 
 group_by(Org, tender_status) %>% slice(1:5)
 
 ggplotly(ggplot(data = assam_bids, aes(x = Org, y=total, fill = no_of_bids_received)) + geom_bar(stat = "identity") +  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
-
+```
