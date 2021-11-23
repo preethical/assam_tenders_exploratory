@@ -451,7 +451,7 @@ quantiles_imr_sept <- assam_nreg_1 %>%
 
 univariate_color_scale <- tibble(
   "3" = "#4885C1", # low tenders, high imr
-  "2" = "#BC7C8F",
+  "2" = "#89A1C8",
   "1" = "#CABED0" # low tenders, low imr
 ) %>%
   gather("numbers", "fill")
@@ -563,4 +563,23 @@ ggplotly(ggplot(data = Org_mch, aes(x = reorder(Org.x, -n), y=n)) +
            xlab("") + ylab("Number of tenders") +
            theme(axis.text.x=element_text(angle=90,hjust=1,vjust=.5,colour='black')))
 
+
+## sankey tender status
+
+results <- assam_MCH %>% group_by(tender_status.x, tender_stage.x) %>% tally()
+tender_status <- unique(as.character(results$tender_status.x))
+tender_stage <- unique(as.character(results$tender_stage.x))
+nodes <- data.frame(node = c(0:9), name = c(tender_status,tender_stage))
+
+results <- merge(results, nodes, by.x = "tender_status.x", by.y = "name")
+results <- merge(results, nodes, by.x = "tender_stage.x", by.y = "name")
+links <- results[ , c("node.x", "node.y", "n")]
+colnames(links) <- c("source", "target", "value")
+
+sankeyNetwork(Links = links, Nodes = nodes, 
+              Source = 'source', 
+              Target = 'target', 
+              Value = 'value', 
+              NodeID = 'name',
+              units = 'n')
 
